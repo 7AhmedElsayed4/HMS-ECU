@@ -1,0 +1,243 @@
+#include <iostream>
+#include <string>
+#include <vector>
+#define SIZE 100
+
+using namespace std;
+
+// ========================== Base Class: Info ==========================
+class Info {
+protected:
+    string name;
+    int age, id;
+    string phone;
+    double cost;
+public:
+    void setName(const string& n) { name = n; }
+    void setAge(int a) { age = a; }
+    void setId(int i) { id = i; }
+    void setPhone(const string& p) { phone = p; }
+    void setCost(double c) { cost = c; }
+
+    string getName() const { return name; }
+    int getAge() const { return age; }
+    int getId() const { return id; }
+    string getPhone() const { return phone; }
+    double getCost() const { return cost; }
+};
+
+// ========================== Patient Class ==========================
+class Patient : public Info {
+    // Inherits from Info
+};
+
+// ========================== Stack for Emergency Patients ==========================
+class EmergencyStack {
+private:
+    Patient arr[SIZE];
+    int top;
+public:
+    EmergencyStack() : top(-1) {}
+
+    bool isFull() const { return top == SIZE - 1; }
+    bool isEmpty() const { return top == -1; }
+
+    void push(const Patient& p) {
+        if (!isFull()) {
+            arr[++top] = p;
+            cout << "\n[Emergency] Patient added: " << p.getName() << "\n";
+        }
+        else {
+            cout << "\n[Emergency] Stack is full!\n";
+        }
+    }
+
+    Patient pop() {
+        if (!isEmpty()) {
+            Patient temp = arr[top--];
+            cout << "\n[Emergency] Patient treated: " << temp.getName() << "\n";
+            return temp;
+        }
+        else {
+            cout << "\n[Emergency] No emergency patients!\n";
+            return Patient();
+        }
+    }
+};
+
+// ========================== Queue for Normal Patients ==========================
+class PatientQueue {
+private:
+    Patient arr[SIZE];
+    int front, rear;
+public:
+    PatientQueue() : front(-1), rear(-1) {}
+
+    bool isFull() const { return rear == SIZE - 1; }
+    bool isEmpty() const { return front == -1 || front > rear; }
+
+    void enqueue(const Patient& p) {
+        if (isFull()) {
+            cout << "\n[Queue] Waiting list is full!\n";
+            return;
+        }
+        if (front == -1) front = 0;
+        arr[++rear] = p;
+        cout << "\n[Queue] Patient added: " << p.getName() << "\n";
+    }
+
+    Patient dequeue() {
+        if (!isEmpty()) {
+            Patient temp = arr[front];
+            if (front == rear) {
+                front = rear = -1;
+            }
+            else {
+                front++;
+            }
+            cout << "\n[Queue] Patient discharged: " << temp.getName() << "\n";
+            return temp;
+        }
+        else {
+            cout << "\n[Queue] No normal patients in queue!\n";
+            return Patient();
+        }
+    }
+};
+
+// ========================== Linked List for Discharged Patients ==========================
+struct Node {
+    Patient data;
+    Node* next;
+};
+
+class DischargedList {
+private:
+    Node* head;
+public:
+    DischargedList() : head(nullptr) {}
+
+    void insert(const Patient& p) {
+        Node* newNode = new Node{ p, nullptr };
+        if (!head) head = newNode;
+        else {
+            Node* temp = head;
+            while (temp->next) temp = temp->next;
+            temp->next = newNode;
+        }
+        cout << "[Discharge] Patient added to record: " << p.getName() << "\n";
+    }
+
+    void display() const {
+        Node* temp = head;
+        if (!temp) {
+            cout << "\n--- No discharged patients. ---\n";
+            return;
+        }
+        cout << "\n========== Discharged Patients ==========\n";
+        while (temp) {
+            cout << "- " << temp->data.getName()
+                << " (ID: " << temp->data.getId()
+                << ", Phone: " << temp->data.getPhone()
+                << ", Paid: $" << temp->data.getCost() << ")\n";
+            temp = temp->next;
+        }
+        cout << "========================================\n";
+    }
+
+    ~DischargedList() {
+        while (head) {
+            Node* temp = head;
+            head = head->next;
+            delete temp;
+        }
+    }
+};
+
+// ========================== Helper Function to Check for Duplicate ID ==========================
+bool isDuplicateID(const vector<int>& usedIDs, int newID) {
+    for (int id : usedIDs) {
+        if (id == newID) return true;
+    }
+    return false;
+}
+
+// ========================== Main Function ==========================
+int main() {
+    EmergencyStack emergencyStack;
+    PatientQueue normalQueue;
+    DischargedList dischargedList;
+
+    int numPatients;
+    double totalRevenue = 0;
+    vector<int> usedIDs;
+
+    cout << "\nEnter number of patients: ";
+    cin >> numPatients;
+
+    for (int i = 0; i < numPatients; ++i) {
+        Patient p;
+        string name, phone;
+        int age, id, type;
+
+        cout << "\n-----------------------------";
+        cout << "\nEntering details for patient #" << i + 1 << ":\n";
+
+        cout << "Enter patient name: "; cin >> ws; getline(cin, name);
+        cout << "Enter age: "; cin >> age;
+
+        // Validate unique ID
+        while (true) {
+            cout << "Enter ID: "; cin >> id;
+            if (isDuplicateID(usedIDs, id)) {
+                cout << "[Error] ID already exists! Please enter a unique ID.\n";
+            }
+            else {
+                usedIDs.push_back(id);
+                break;
+            }
+        }
+
+        cout << "Enter phone number: "; cin >> phone;
+        cout << "Enter 1 for emergency or 2 for normal: "; cin >> type;
+
+        p.setName(name);
+        p.setAge(age);
+        p.setId(id);
+        p.setPhone(phone);
+
+        if (type == 1) {
+            p.setCost(10.0);
+            emergencyStack.push(p);
+            totalRevenue += 10.0;
+        }
+        else {
+            p.setCost(5.0);
+            normalQueue.enqueue(p);
+            totalRevenue += 5.0;
+        }
+    }
+
+    cout << "\n=======================";
+    cout << "\nTreating Emergency Patients";
+    cout << "\n=======================\n";
+
+    while (!emergencyStack.isEmpty()) {
+        Patient treated = emergencyStack.pop();
+        if (!treated.getName().empty()) dischargedList.insert(treated);
+    }
+
+    cout << "\n=======================";
+    cout << "\nDischarging Normal Patients";
+    cout << "\n=======================\n";
+
+    while (!normalQueue.isEmpty()) {
+        Patient discharged = normalQueue.dequeue();
+        if (!discharged.getName().empty()) dischargedList.insert(discharged);
+    }
+
+    dischargedList.display();
+    cout << "\n Total Revenue Collected: $" << totalRevenue << "\n";
+
+    return 0;
+}
